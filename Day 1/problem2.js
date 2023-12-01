@@ -24,6 +24,47 @@ const rl = readline.createInterface({
 
 console.log("Success.");
 
+function parse_digit(digit){
+    //First, try and parse it as an int directly
+    let parsedDigit = parseInt(digit);
+    if(!isNaN(parsedDigit)){
+        return parsedDigit;
+    }
+
+    //Next, see if it matches the name of a digit
+    switch(digit.toLowerCase()){
+        case "one":
+            return 1;
+        case "two":
+            return 2;
+        case "three":
+            return 3;
+        case "four":
+            return 4;
+        case "five":
+            return 5;
+        case "six":
+            return 6;
+        case "seven":
+            return 7;
+        case "eight":
+            return 8;
+        case "nine":
+            return 9;
+        case "ight":
+            return 8;
+        case "ne":
+            return 1;
+        case "ine":
+            return 9;
+        case "hree":
+            return 3;
+        case "wo":
+            return 2;
+    }
+
+}
+
 //Initialize array to hold the calibration values for each line
 let calibrationValues = [];
 
@@ -32,21 +73,19 @@ rl.on('line', (line) => {
     //Initialize variables ot hold first and last digits
     let firstDigit = -1;
     let lastDigit = -1;
-
+    console.log("Parsing line " + line);
     //Iterate through each character of the line to check if it is a numeral
-    for (let i=0; i < line.length; i++){
-        //Try to parse the character as an int
-        let digit = parseInt(line[i]);
-        //If it parses successfully, use it as the first or last digit
-        if(!isNaN(digit)){
-            /*Assign the digit to the first or last depending on whether 
-            the first has been found already */
-            if(firstDigit == -1){
-                firstDigit = digit;
-            }
-            else{
-                lastDigit = digit;
-            }
+    let digitMatchRegex = /([1-9]|(one|two|three|four|five|six|seven|eight|nine|(?<=e)ight|(?<=o)ne|(?<=n)ine)|(?<=t)hree|(?<=t)wo)/g;
+    let matches = line.match(digitMatchRegex);
+    for(let i = 0; i < matches.length; i++){
+        let digit = parse_digit(matches[i]);
+        /*Assign the digit to the first or last depending on whether 
+        the first has been found already */
+        if(firstDigit == -1){
+            firstDigit = digit;
+        }
+        else{
+            lastDigit = digit;
         }
     }
 
@@ -57,6 +96,7 @@ rl.on('line', (line) => {
 
     //Assemble the first and last digit into a two-digit number
     if(firstDigit != -1 && lastDigit != -1){
+        //console.log("Successfully parsed values " + firstDigit + " and " + lastDigit + " from line " + line);
         calibrationValues.push((firstDigit * 10) + lastDigit);
     }
     //If an error occurs parsing a line, log it
