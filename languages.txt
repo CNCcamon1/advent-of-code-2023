@@ -1,0 +1,12 @@
+For each day, a random language will be chosen from the following pool:
+
+C
+C++
+C#
+Java
+JavaScript
+Kotlin
+Rust
+Go
+
+Day 1 - JavaScript
