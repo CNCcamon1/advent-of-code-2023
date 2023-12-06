@@ -23,63 +23,99 @@ class ValueMapping{
     }
 }
 
-function parse_seeds_line(line){
-    let seeds = line.split(' ').slice(1);
-    let rangeStart = null;
-    let rangeLength = null;
-    let totalSeedList = [];
-    for(let i=0; i<seeds.length; i++){
-        if(i % 2 == 0){
-            rangeStart = seeds[i];
-        }
-        else{
-            rangeLength = seeds[i];
-            for(let j=0; j<rangeLength; j++){
-                totalSeedList.push(rangeStart + j);
-            }
-            rangeStart = null;
-            rangeLength = null;
-        }
-    }
-}
-
 function parse_line(line){
     let lineValues = line.split(' ');
-    return new ValueMapping(lineValues[0], lineValues[1], lineValues[2]);
+    return new ValueMapping(Number(lineValues[0]), Number(lineValues[1]), Number(lineValues[2]));
 }
 
 function calculate_next_mapping(
-    currentMappingValue,
+    currentSourceStart,
+    currentSourceEnd,
     mappings,
     mappingsIndex
 ){
     let currentMapping = mappings[mappingsIndex];
-    let nextMappingValue = 0;
-    for(let i=0; i<currentMapping.length; i++){
-        let sourceOffset = currentMappingValue - currentMapping[i].sourceStart;
-        if(sourceOffset > 0 && sourceOffset <= currentMapping[i].rangeLength){
-            nextMappingValue = Number(currentMapping[i].destinationStart) + Number(sourceOffset);
+    let nextRanges = [];
+    while(currentSourceStart != -1){
+        let currentRangeMapped = false;
+        let bestNonFitOffset = -Infinity;
+        let bestNonFitIndex = -1;
+        for(let i=0; i<currentMapping.length; i++){
+            let sourceStartOffset = currentSourceStart - currentMapping[i].sourceStart;
+            if(sourceStartOffset >= 0){
+                //The current range starts after the current destination range
+                if(sourceStartOffset <= currentMapping[i].rangeLength){
+                    //Current source start is in range for this destination range
+                    let destinationEnd = -1;
+                    if(currentSourceEnd <= currentMapping[i].sourceStart + currentMapping[i].rangeLength){
+                        //The current source range ends within this destination range
+                        destinationEnd = currentMapping[i].destinationStart + currentMapping[i].rangeLength -
+                        ((currentMapping[i].sourceStart + currentMapping[i].rangeLength)
+                        - currentSourceEnd)
+                        currentSourceStart = -1;
+                    }
+                    else{
+                        //The destination range ends before the source range does
+                        destinationEnd = currentMapping[i].destinationStart + currentMapping[i].rangeLength;
+                        if(sourceStartOffset == currentMapping[i].rangeLength){
+                            currentSourceStart = currentMapping[i].sourceStart + currentMapping[i].rangeLength + 1;
+                        }
+                        else{
+                            currentSourceStart = currentMapping[i].sourceStart + currentMapping[i].rangeLength;
+                        }
+
+                    }
+                    nextRanges.push({"destinationStart": currentMapping[i].destinationStart + sourceStartOffset, 
+                        "destinationEnd": destinationEnd});
+                    currentRangeMapped = true;
+                    if(currentSourceStart == -1){
+                        break;
+                    }
+                }
+            }
+            else{
+                if(sourceStartOffset > bestNonFitOffset){
+                    bestNonFitOffset = sourceStartOffset;
+                    bestNonFitIndex = i;
+                }
+            }
+
+        }
+        if(!currentRangeMapped && bestNonFitIndex != -1){
+            nextRanges.push({"destinationStart": currentSourceStart, 
+                "destinationEnd": currentMapping[bestNonFitIndex].sourceStart});
+            break;
+        }
+        else if(!currentRangeMapped){
+            nextRanges.push({"destinationStart": currentSourceStart, 
+                "destinationEnd": currentSourceEnd});
             break;
         }
     }
-    if(nextMappingValue == 0){
-        nextMappingValue = currentMappingValue;
-    }
     if(mappingsIndex  == 7){
-        return nextMappingValue;
+        nextRanges = nextRanges.sort((a,b) => a["destinationStart"] - b["destinationStart"]);
+        return nextRanges[0]["destinationStart"];
     }
     else{
-        return calculate_next_mapping(nextMappingValue, mappings, mappingsIndex + 1);
+        let lowestLocationValue = Infinity;
+        for(let i=0; i<nextRanges.length; i++){
+            let locationValueForNextRange = calculate_next_mapping(nextRanges[i]["destinationStart"], 
+                nextRanges[i]["destinationEnd"], mappings, mappingsIndex + 1);
+            if(locationValueForNextRange < lowestLocationValue){
+                lowestLocationValue = locationValueForNextRange;
+            }
+        }
+        return lowestLocationValue;
     }
 }
 
-let seeds = [];
+let seedsLine = "";
 let mappings = [];
 let stepParsing = -1;
 
 rl.on('line', (line) => {
     if(stepParsing == -1){
-        seeds = parse_seeds_line(line);
+        seedsLine = line;
         stepParsing++;
     }
     else if(line.includes(':')){
@@ -96,15 +132,23 @@ rl.on('line', (line) => {
 
 rl.on('close', function () {
     let minLocationNumber = Infinity;
+    let seeds = seedsLine.split(' ').slice(1);
+    let rangeStart = null;
+    let rangeLength = null;
     for(let i=0; i<seeds.length; i++){
-        let seedLowestLocation = calculate_next_mapping(
-            seeds[i],
-            mappings,
-            1
-        );
-
-        if(seedLowestLocation < minLocationNumber){
-            minLocationNumber = seedLowestLocation;
+        if(i % 2 == 0){
+            rangeStart = Number(seeds[i]);
+        }
+        else{
+            rangeLength = Number(seeds[i]);
+            let lowestLocationForRange = 
+                calculate_next_mapping(rangeStart, rangeStart+rangeLength, mappings, 1);
+            if(lowestLocationForRange < minLocationNumber){
+                console.log("Updating minimum location number to  "+ lowestLocationForRange);
+                minLocationNumber = lowestLocationForRange;
+            }
+            rangeStart = null;
+            rangeLength = null;
         }
     }
     console.log("The answer is " + minLocationNumber);
