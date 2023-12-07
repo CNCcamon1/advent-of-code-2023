@@ -44,25 +44,20 @@ function calculate_next_mapping(
             let sourceStartOffset = currentSourceStart - currentMapping[i].sourceStart;
             if(sourceStartOffset >= 0){
                 //The current range starts after the current destination range
-                if(sourceStartOffset <= currentMapping[i].rangeLength){
+                if(sourceStartOffset < currentMapping[i].rangeLength){
                     //Current source start is in range for this destination range
                     let destinationEnd = -1;
-                    if(currentSourceEnd <= currentMapping[i].sourceStart + currentMapping[i].rangeLength){
+                    if(currentSourceEnd <= currentMapping[i].sourceStart + currentMapping[i].rangeLength - 1){
                         //The current source range ends within this destination range
                         destinationEnd = currentMapping[i].destinationStart + currentMapping[i].rangeLength -
-                        ((currentMapping[i].sourceStart + currentMapping[i].rangeLength)
+                        1 - ((currentMapping[i].sourceStart + currentMapping[i].rangeLength - 1)
                         - currentSourceEnd)
                         currentSourceStart = -1;
                     }
                     else{
                         //The destination range ends before the source range does
-                        destinationEnd = currentMapping[i].destinationStart + currentMapping[i].rangeLength;
-                        if(sourceStartOffset == currentMapping[i].rangeLength){
-                            currentSourceStart = currentMapping[i].sourceStart + currentMapping[i].rangeLength + 1;
-                        }
-                        else{
-                            currentSourceStart = currentMapping[i].sourceStart + currentMapping[i].rangeLength;
-                        }
+                        destinationEnd = currentMapping[i].destinationStart + currentMapping[i].rangeLength - 1;
+                        currentSourceStart = currentMapping[i].sourceStart + currentMapping[i].rangeLength;
 
                     }
                     nextRanges.push({"destinationStart": currentMapping[i].destinationStart + sourceStartOffset, 
